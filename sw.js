@@ -1,6 +1,6 @@
 // Service Worker：ネット優先＋キャッシュフォールバック
 // アプリ本体を更新したら CACHE の版数を上げると古いキャッシュが消える
-const CACHE = "meal-app-v1";
+const CACHE = "meal-app-v2";
 const ASSETS = [
   "./",
   "index.html",
