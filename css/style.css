@@ -119,6 +119,8 @@ label.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--gr
 .btn.small { font-size: 14px; padding: 6px 12px; }
 .btn.wide { display: block; width: 100%; margin-top: 10px; }
 .btn:disabled { opacity: 0.5; }
+.btn.ai { color: #5b3fb5; border-color: #d9d0f3; background: #f6f3fd; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.ai-note { margin: 6px 0 2px; }
 .btn-icon {
   border: 0; background: none; font-size: 18px;
   min-width: 40px; min-height: 40px; border-radius: 10px; color: var(--text);

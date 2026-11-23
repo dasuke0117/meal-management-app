@@ -1,5 +1,6 @@
 import { getData, update, uid } from "../store.js";
 import { currentTarget, sumEntries } from "../calc.js";
+import { estimateNutrition, AiError } from "../ai.js";
 import { MEALS, esc, ymd, addDays, fmtDate, num, round1, guessMeal, toast, openSheet } from "../util.js";
 
 let date = ymd();
@@ -159,6 +160,7 @@ function openAddSheet(onDone) {
 
   const el = sheet.el;
   const meal = () => el.querySelector('input[name="meal"]:checked').value;
+  bindEstimate(el);
   let picked = null;
 
   const drawFoods = () => {
@@ -265,6 +267,8 @@ function foodFields(f, withQty) {
       <label>単位<input name="unit" value="${esc(f.unit)}" placeholder="例 1個"></label>
       ${withQty ? `<label>数量<input name="qty" inputmode="decimal" value="1"></label>` : "<span></span>"}
     </div>
+    <button type="button" class="btn ai wide" data-ai-est>✨ AIでkcal・PFCを推定</button>
+    <p class="muted small ai-note" data-ai-note>食品名と単位（例「ご飯」「150g」）を入れて押すと、下の値を自動で入れます。単位が空なら1人前で推定します。</p>
     <p class="muted small">以下は単位あたりの値</p>
     <div class="grid4">
       <label>kcal<input name="kcal" inputmode="decimal" value="${f.kcal}" required></label>
@@ -272,6 +276,41 @@ function foodFields(f, withQty) {
       <label>F(g)<input name="f" inputmode="decimal" value="${f.f}"></label>
       <label>C(g)<input name="c" inputmode="decimal" value="${f.c}"></label>
     </div>`;
+}
+
+/** container 内の「AIで推定」ボタンを有効にする */
+function bindEstimate(container) {
+  container.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-ai-est]");
+    if (!btn || btn.disabled) return;
+    const form = btn.closest("form");
+    const name = form.name.value.trim();
+    if (!name) return toast("先に食品名を入れてください");
+    const note = form.querySelector("[data-ai-note]");
+    const d = getData();
+    if (!d.settings.apiKey) {
+      note.textContent = "AIで推定するには、設定画面でAPIキーを保存してください。";
+      return;
+    }
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> 推定中…`;
+    try {
+      const r = await estimateNutrition({ apiKey: d.settings.apiKey, model: d.settings.model, name, unit: form.unit.value.trim() });
+      if (!form.isConnected) return;
+      if (!form.unit.value.trim()) form.unit.value = r.unit;
+      form.kcal.value = Math.round(r.kcal);
+      form.p.value = round1(r.p);
+      form.f.value = round1(r.f);
+      form.c.value = round1(r.c);
+      note.textContent = `AIの推定値です（${r.note}）。必要なら直してください。`;
+    } catch (err) {
+      note.textContent = err instanceof AiError ? err.message : `エラーが発生しました：${err?.message || err}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  });
 }
 
 function readFood(fd) {
@@ -289,6 +328,7 @@ function openFoodManager(onDone) {
   const sheet = openSheet("定型食品の管理", `<div id="fm"></div>`);
   const el = sheet.el;
   let editing = null; // null=一覧, "new" or id=フォーム
+  bindEstimate(el);
 
   const draw = () => {
     const foods = getData().foods;
